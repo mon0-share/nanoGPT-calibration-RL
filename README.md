@@ -1,4 +1,12 @@
 
+# Well Calibrating nanoGPT 
+
+This fork is just a way to convince myself that RL with verifiable rewards can be used to improve model calibration.
+
+The files
+
+
+
 # nanoGPT
 
 ![nanoGPT](assets/nanogpt.jpg)
