@@ -1,9 +1,80 @@
 
 # Well Calibrating nanoGPT 
 
-This fork is just a way to convince myself that RL with verifiable rewards can be used to improve model calibration.
+This fork is just a humorous way to convince myself that RL with verifiable rewards can be used to improve model calibration.
 
-The files
+We train a randomly-initialized nanoGPT model with **REINFORCE** on Brier scores.
+The model is constrained to output exactly one of **three** “forecast tokens”:
+
+- `"1. 25%"`
+- `"2. 25%"`
+- `"1. 50%"`
+
+These are interpreted as probabilities for a binary A/B question, and reward is computed from the known correct answer.
+
+---
+
+## Python files you need
+
+### 1) `env_brier_min.py`
+Defines the **environment / reward**:
+
+- `MCQExample` data structure (qid, question, A, B, correct)
+- `make_prompt(ex)` to format the prompt text
+- `brier(choice_str, correct)` computes the Brier score
+- `reward(choice_str, correct, mode=...)` converts Brier into a reward
+- `score_batch(...)` optional helper for batches (e.g., size 4)
+
+No model code lives here; this module is deterministic/verifiable.
+
+---
+
+### 2) `policy_choice.py`
+Defines the **policy**:
+
+- Loads a character vocabulary (`meta.pkl`) so it can encode prompt text into token IDs.
+- Extends the vocab with the 3 special output tokens.
+- Builds a randomly-initialized nanoGPT `GPT`.
+- Implements `act(prompt_text, sample=True)` which:
+  - runs GPT once to get next-token logits
+  - masks logits so only the 3 special tokens are possible
+  - samples one of the 3 actions (or argmax)
+  - returns the chosen string and the **log probability** needed for REINFORCE
+
+Also provides `eval_choice(prompt_text)` for deterministic evaluation.
+
+---
+
+### 3) `train_reinforce.py`
+Training script that wires everything together:
+
+- Loads your questions and answers from text files:
+  - questions format per line: `1. ... A) ... B) ...`
+  - answers format per line: `1. A` or `1. B`
+- Builds a dataset of `MCQExample`
+- Splits into train/val
+- Runs REINFORCE updates on minibatches (default batch size = 4):
+  - sample action for each prompt using `policy.act(...)`
+  - compute reward from `env_brier_min.reward(...)`
+  - compute policy gradient loss: `-(advantage * logprob)`
+  - optimizer step
+- Periodically evaluates held-out mean Brier with `policy.eval_choice(...)`
+- Saves checkpoints to an output folder
+
+---
+
+## Required data files
+
+Example location:
+
+- `data/questions_answers/Questions.txt`
+- `data/questions_answers/Answers.txt`
+
+Questions example (one per line):
+
+
+
+
 
 
 
